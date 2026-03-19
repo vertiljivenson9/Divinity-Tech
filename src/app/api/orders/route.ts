@@ -1,51 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAuth, requireAdmin } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
+  const session = await requireAuth(request)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-    const status = searchParams.get('status')
-
-    const where: any = {}
-    if (userId) where.userId = userId
-    if (status) where.status = status
-
-    const orders = await db.order.findMany({
-      where,
-      include: { items: { include: { product: true } }, user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' }
-    })
+    const orders = session.role === 'ADMIN'
+      ? await db.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' } })
+      : await db.order.findMany({ where: { userId: session.id }, include: { items: true }, orderBy: { createdAt: 'desc' } })
     return NextResponse.json(orders)
   } catch (error) {
-    return NextResponse.json({ error: 'Error al obtener pedidos' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al obtener órdenes' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireAuth(request)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
-    const body = await request.json()
-    const { userId, items, shippingName, shippingPhone, shippingAddr, notes } = body
-
-    let subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
-    const shippingCost = subtotal > 500000 ? 0 : 15000
-    const tax = subtotal * 0.19
-    const total = subtotal + shippingCost + tax
-
+    const data = await request.json()
     const order = await db.order.create({
       data: {
-        userId, status: 'pending', total, shippingCost, tax, notes, shippingName, shippingPhone, shippingAddr,
-        items: { create: items.map((item: any) => ({ productId: item.productId, name: item.name, price: item.price, quantity: item.quantity })) }
-      },
-      include: { items: true }
+        userId: session.id,
+        status: 'pending',
+        total: data.total,
+        shippingAddress: data.shippingAddress,
+        items: {
+          create: data.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        }
+      }
     })
-
-    for (const item of items) {
-      await db.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } })
-    }
-
     return NextResponse.json(order)
   } catch (error) {
-    return NextResponse.json({ error: 'Error al crear pedido' }, { status: 500 })
+    return NextResponse.json({ error: 'Error al crear orden' }, { status: 500 })
   }
 }

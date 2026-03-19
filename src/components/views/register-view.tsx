@@ -1,0 +1,159 @@
+'use client'
+
+import { useState } from 'react'
+import { signIn } from 'next-auth/react'
+import { useAppStore } from '@/store'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { UserPlus, Loader2, ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
+
+export function RegisterView() {
+  const { setView } = useAppStore()
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Las contraseñas no coinciden')
+      return
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
+      })
+
+      if (res.ok) {
+        toast.success('Cuenta creada exitosamente')
+        // Auto login
+        const result = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false
+        })
+        if (!result?.error) {
+          setView('home')
+        }
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Error al crear la cuenta')
+      }
+    } catch (error) {
+      toast.error('Error al crear la cuenta')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="max-w-md mx-auto py-12">
+      <Button variant="ghost" onClick={() => setView('home')} className="mb-6">
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Volver al inicio
+      </Button>
+
+      <Card>
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <UserPlus className="h-8 w-8 text-primary" />
+          </div>
+          <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
+          <CardDescription>
+            Regístrate para comenzar a comprar
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nombre completo</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Tu nombre"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="tu@email.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Repite tu contraseña"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creando cuenta...
+                </>
+              ) : (
+                'Crear Cuenta'
+              )}
+            </Button>
+          </form>
+
+          <Separator className="my-6" />
+
+          <p className="text-center text-sm text-muted-foreground">
+            ¿Ya tienes una cuenta?{' '}
+            <Button variant="link" className="p-0" onClick={() => setView('login')}>
+              Inicia sesión aquí
+            </Button>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

@@ -1,34 +1,62 @@
-import type { Metadata } from 'next'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'DIVINITY SKY TOOLS',
-  description: 'Tu catálogo digital de productos tecnológicos',
-}
+import { useEffect, useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { Header } from '@/components/header'
+import { HomeView } from '@/components/views/home-view'
+import { CatalogView } from '@/components/views/catalog-view'
+import { ProductDetailView } from '@/components/views/product-detail-view'
+import { CartSidebar } from '@/components/cart-sidebar'
+import { CheckoutView } from '@/components/views/checkout-view'
+import { OrdersView } from '@/components/views/orders-view'
+import { LoginView } from '@/components/views/login-view'
+import { RegisterView } from '@/components/views/register-view'
+import { AdminDashboard } from '@/components/admin/admin-dashboard'
+import { AdminProducts } from '@/components/admin/admin-products'
+import { AdminCategories } from '@/components/admin/admin-categories'
+import { AdminOrders } from '@/components/admin/admin-orders'
+import { useAppStore } from '@/store'
 
 export default function Page() {
+  const { data: session, status } = useSession()
+  const { view, productId, cartOpen, setCartOpen } = useAppStore()
+
+  const renderView = useCallback(() => {
+    switch (view) {
+      case 'home':
+        return <HomeView />
+      case 'catalog':
+        return <CatalogView />
+      case 'product':
+        return productId ? <ProductDetailView productId={productId} /> : <CatalogView />
+      case 'checkout':
+        return status === 'authenticated' ? <CheckoutView /> : <LoginView />
+      case 'orders':
+        return status === 'authenticated' ? <OrdersView /> : <LoginView />
+      case 'login':
+        return <LoginView />
+      case 'register':
+        return <RegisterView />
+      case 'admin-dashboard':
+        return session?.user?.role === 'admin' ? <AdminDashboard /> : <HomeView />
+      case 'admin-products':
+        return session?.user?.role === 'admin' ? <AdminProducts /> : <HomeView />
+      case 'admin-categories':
+        return session?.user?.role === 'admin' ? <AdminCategories /> : <HomeView />
+      case 'admin-orders':
+        return session?.user?.role === 'admin' ? <AdminOrders /> : <HomeView />
+      default:
+        return <HomeView />
+    }
+  }, [view, productId, session?.user?.role, status])
+
   return (
-    <html lang="es">
-      <head>
-        <title>DIVINITY SKY TOOLS</title>
-      </head>
-      <body style={{ fontFamily: 'system-ui, sans-serif', margin: 0, padding: '20px' }}>
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <h1 style={{ color: '#2563EB', fontSize: '2.5rem', marginBottom: '10px' }}>
-            DIVINITY <span style={{ color: '#FF6B35' }}>SKY TOOLS</span>
-          </h1>
-          <p style={{ color: '#666', fontSize: '1.2rem', marginBottom: '30px' }}>
-            Tu catálogo digital de productos tecnológicos
-          </p>
-          <div style={{ padding: '20px', background: '#f5f5f5', borderRadius: '10px', maxWidth: '600px', margin: '0 auto' }}>
-            <h2>🚀 Proyecto Listo</h2>
-            <p>El proyecto ha sido configurado correctamente.</p>
-            <p><strong>Repositorio:</strong> <a href="https://github.com/vertiljivenson9/Divinity-Tech" style={{ color: '#2563EB' }}>GitHub</a></p>
-            <h3 style={{ marginTop: '20px' }}>Credenciales:</h3>
-            <p><strong>Admin:</strong> admin@divinityskytools.com / admin123</p>
-            <p><strong>Usuario:</strong> user@divinityskytools.com / user123</p>
-          </div>
-        </div>
-      </body>
-    </html>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto max-w-7xl px-4 py-6">
+        {renderView()}
+      </main>
+      <CartSidebar open={cartOpen} onOpenChange={setCartOpen} />
+    </div>
   )
 }

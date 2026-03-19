@@ -30,26 +30,22 @@ async function createToken(payload: any): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json()
+    const { email, password } = await request.json()
     if (!email || !password) {
       return NextResponse.json({ error: 'Email y contraseña requeridos' }, { status: 400 })
     }
 
-    const existingUser = await db.user.findUnique({ where: { email } })
-    if (existingUser) {
-      return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+    const user = await db.user.findUnique({ where: { email } })
+    if (!user || user.password !== password) {
+      return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 })
     }
 
-    const user = await db.user.create({
-      data: { name, email, password, role: 'user' }
-    })
-
     const token = await createToken({
-      id: user.id, email: user.email, name: user.name, role: user.role
+      id: user.id, email: user.email, name: user.name, role: user.role, image: user.image
     })
 
     const response = NextResponse.json({
-      id: user.id, email: user.email, name: user.name, role: user.role
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, image: user.image }
     })
 
     response.cookies.set('auth_token', token, {
@@ -58,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Register error:', error)
-    return NextResponse.json({ error: 'Error al crear usuario' }, { status: 500 })
+    console.error('Login error:', error)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
 }

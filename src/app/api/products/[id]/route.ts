@@ -13,16 +13,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { requireAdmin } = await import('@/lib/auth-helpers')
+  const session = await requireAdmin(request)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { id } = await params
-    const body = await request.json()
-    const { name, description, price, stock, image, images, specs, featured, isNew, categoryId } = body
-    const slug = name ? name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : undefined
-
+    const data = await request.json()
     const product = await db.product.update({
       where: { id },
-      data: { name, slug, description, price: price ? parseFloat(price) : undefined, stock: stock !== undefined ? parseInt(stock) : undefined, image, images, specs, featured, isNew, categoryId },
-      include: { category: true }
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        price: Number(data.price),
+        stock: Number(data.stock),
+        image: data.image,
+        categoryId: data.categoryId,
+        featured: data.featured,
+        isNew: data.isNew,
+        specs: data.specs ? JSON.stringify(data.specs) : null
+      }
     })
     return NextResponse.json(product)
   } catch (error) {
@@ -31,6 +42,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { requireAdmin } = await import('@/lib/auth-helpers')
+  const session = await requireAdmin(request)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { id } = await params
     await db.product.delete({ where: { id } })
