@@ -1,14 +1,12 @@
-import { type Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { Providers } from './providers'
-import { Toaster } from '@/components/ui/sonner'
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: 'DIVINITY SKY TOOLS - Catálogo Digital',
-  description: 'Tu catálogo digital de productos tecnológicos',
+  title: "DIVINITY SKY TOOLS - Catálogo de Productos Tecnológicos",
+  description: "Tu catálogo digital de productos tecnológicos",
 }
 
 export default function RootLayout({
@@ -17,13 +15,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
-      </body>
+    <html lang="es">
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
