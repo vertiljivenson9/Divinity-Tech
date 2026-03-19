@@ -7,7 +7,7 @@
   
   [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+  [![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare)](https://pages.cloudflare.com/)
   [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
 </div>
 
@@ -32,12 +32,11 @@
 - **Productos**: CRUD completo, gestionar destacados y productos nuevos
 - **Categorías**: Administración de categorías del catálogo
 - **Pedidos**: Gestión de pedidos, cambio de estados, detalles de compra
-- **Usuarios**: Control de usuarios registrados
 
 ### 🎨 Diseño
 - **Tema claro/oscuro**: Cambio de tema con persistencia
 - **Responsive**: Adaptado para móvil, tablet y desktop
-- **Colores**: Azul primario y mamey como colores de marca
+- **Colores**: Azul primario (`#2563EB`) y mamey (`#FF6B35`)
 
 ---
 
@@ -48,14 +47,14 @@
 | **Framework** | Next.js 16 (App Router) |
 | **Lenguaje** | TypeScript 5 |
 | **Estilos** | Tailwind CSS 4 + shadcn/ui |
-| **Base de datos** | SQLite con Prisma ORM |
+| **Base de datos** | SQLite (dev) / D1 (Cloudflare) |
 | **Autenticación** | NextAuth.js v4 |
 | **Estado** | Zustand |
-| **Iconos** | Lucide React |
+| **Hosting** | Cloudflare Pages |
 
 ---
 
-## 📦 Instalación
+## 📦 Instalación Local
 
 ```bash
 # Clonar el repositorio
@@ -75,6 +74,42 @@ npx prisma db seed
 # Iniciar servidor de desarrollo
 npm run dev
 ```
+
+---
+
+## ☁️ Despliegue en Cloudflare
+
+### Prerrequisitos
+- Cuenta de Cloudflare
+- Wrangler CLI instalado: `npm install -g wrangler`
+
+### Pasos
+
+```bash
+# 1. Crear base de datos D1
+wrangler d1 create divinity-sky-tools-db
+
+# 2. Copiar el database_id del output y actualizar wrangler.toml
+
+# 3. Configurar secrets
+wrangler pages secret put NEXTAUTH_SECRET
+# Ingresa un secret aleatorio: openssl rand -base64 32
+
+# 4. Construir para Cloudflare
+npm run pages:build
+
+# 5. Desplegar
+npm run pages:deploy
+```
+
+### Variables de Entorno (Cloudflare Dashboard)
+
+Configura estas variables en **Settings > Environment Variables**:
+
+| Variable | Descripción |
+|----------|-------------|
+| `NEXTAUTH_URL` | URL de tu sitio (ej: `https://divinity-sky-tools.pages.dev`) |
+| `NEXTAUTH_SECRET` | Secreto para JWT (generar con `openssl rand -base64 32`) |
 
 ---
 
@@ -98,7 +133,7 @@ divinity-sky-tools/
 │   ├── app/
 │   │   ├── api/           # Endpoints REST
 │   │   ├── layout.tsx     # Layout principal
-│   │   ├── page.tsx       # Página principal (SPA)
+│   │   ├── page.tsx       # Página principal
 │   │   └── providers.tsx  # Providers de React
 │   ├── components/
 │   │   ├── ui/            # Componentes shadcn/ui
@@ -107,8 +142,8 @@ divinity-sky-tools/
 │   └── lib/               # Utilidades y configuración
 ├── public/
 │   └── logo.png           # Logo de la marca
-├── .env.example           # Variables de entorno
-├── package.json
+├── wrangler.toml          # Configuración Cloudflare
+├── next.config.ts         # Configuración Next.js
 └── README.md
 ```
 
@@ -120,6 +155,19 @@ divinity-sky-tools/
 |-------|-----|-----|
 | **Azul Primario** | `#2563EB` | Color principal, botones, enlaces |
 | **Mamey** | `#FF6B35` | Acentos, destacados, CTAs |
+
+---
+
+## 🚀 Comandos
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Construir para producción |
+| `npm run pages:build` | Construir para Cloudflare |
+| `npm run pages:deploy` | Desplegar en Cloudflare |
+| `npm run db:push` | Sincronizar schema con BD |
+| `npm run db:seed` | Poblar base de datos |
 
 ---
 

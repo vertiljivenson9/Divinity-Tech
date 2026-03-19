@@ -11,3 +11,6 @@ export const db =
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+
+// Export type for Cloudflare environment
+export type { CloudflareEnv } from './db-cloudflare'
