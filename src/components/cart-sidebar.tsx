@@ -1,195 +1,176 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import { useAppStore } from '@/store'
-import { useCartStore } from '@/store/cart'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
-import Image from 'next/image'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Trash2, Plus, Minus, X, ShoppingBag } from "lucide-react"
+import { useCartStore, type CartItem } from "@/store/cart"
 
 interface CartSidebarProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  isOpen: boolean
+  onClose: () => void
+  user: any
+  onCheckoutComplete: () => void
 }
 
-export function CartSidebar({ open, onOpenChange }: CartSidebarProps) {
-  const { setView } = useAppStore()
-  const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore()
-  const { status } = useSession()
+export function CartSidebar({ isOpen, onClose, user, onCheckoutComplete }: CartSidebarProps) {
+  const { items, removeItem, updateQuantity, clearCart, getTotal } = useCartStore()
+  const [checkingOut, setCheckingOut] = useState(false)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
-    }).format(price)
-  }
+  const handleCheckout = async () => {
+    if (!user) {
+      setShowLoginPrompt(true)
+      return
+    }
 
-  const handleCheckout = () => {
-    onOpenChange(false)
-    if (status === 'authenticated') {
-      setView('checkout')
-    } else {
-      setView('login')
+    setCheckingOut(true)
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          total: getTotal(),
+          items: items.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        }),
+      })
+
+      if (response.ok) {
+        clearCart()
+        onCheckoutComplete()
+        onClose()
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+    } finally {
+      setCheckingOut(false)
     }
   }
 
-  const subtotal = getTotal()
-  const shipping = subtotal > 500000 ? 0 : 15000
-  const tax = subtotal * 0.19
-  const total = subtotal + shipping + tax
-
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5" />
-            Carrito de Compras
-          </SheetTitle>
-        </SheetHeader>
-
-        {items.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <ShoppingBag className="h-16 w-16 text-muted-foreground/50" />
-            <p className="text-muted-foreground">Tu carrito está vacío</p>
-            <Button variant="outline" onClick={() => {
-              onOpenChange(false)
-              setView('catalog')
-            }}>
-              Ver Productos
+    <>
+      {/* Cart Sidebar */}
+      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-xl transform transition-transform duration-300 z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5 text-[#2563EB]" />
+              Tu Carrito
+            </h2>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
             </Button>
           </div>
-        ) : (
-          <>
-            {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4">
-              {items.map((item) => (
-                <div key={item.productId} className="flex gap-4 p-3 bg-muted rounded-lg">
-                  {/* Image */}
-                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-background flex-shrink-0">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-secondary/10">
-                        <span className="text-xs font-bold text-primary/50">DS</span>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{item.name}</h4>
-                    <p className="text-sm text-primary font-semibold">
-                      {formatPrice(item.price)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex items-center border rounded">
+          <div className="flex-1 overflow-y-auto p-4">
+            {items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <ShoppingBag className="h-16 w-16 mb-4 opacity-50" />
+                <p>Tu carrito está vacío</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ShoppingBag className="h-8 w-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm truncate">{item.name}</h4>
+                      <p className="text-[#2563EB] font-bold">${item.price.toFixed(2)}</p>
+                      <div className="flex items-center gap-2 mt-1">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <span className="text-sm w-8 text-center">{item.quantity}</span>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          disabled={item.quantity >= item.stock}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => removeItem(item.productId)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => removeItem(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-
-                  {/* Subtotal */}
-                  <div className="text-right">
-                    <p className="font-semibold">
-                      {formatPrice(item.price * item.quantity)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Separator />
-
-            {/* Summary */}
-            <div className="space-y-2 py-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
+                ))}
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Envío {subtotal > 500000 && <span className="text-green-600">(Gratis)</span>}
-                </span>
-                <span>{shipping === 0 ? 'Gratis' : formatPrice(shipping)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">IVA (19%)</span>
-                <span>{formatPrice(tax)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span className="text-primary">{formatPrice(total)}</span>
-              </div>
-            </div>
+            )}
+          </div>
 
-            {/* Actions */}
-            <div className="space-y-2">
-              <Button className="w-full" size="lg" onClick={handleCheckout}>
-                Proceder al Pago
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+          {items.length > 0 && (
+            <div className="border-t p-4 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total:</span>
+                <span className="text-xl font-bold text-[#2563EB]">${getTotal().toFixed(2)}</span>
+              </div>
               <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  onOpenChange(false)
-                  setView('catalog')
-                }}
+                className="w-full bg-[#FF6B35] hover:bg-[#FF6B35]/90"
+                onClick={handleCheckout}
+                disabled={checkingOut}
               >
-                Seguir Comprando
+                {checkingOut ? 'Procesando...' : 'Finalizar Compra'}
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-destructive hover:text-destructive"
-                onClick={clearCart}
-              >
+              <Button variant="outline" className="w-full" onClick={clearCart}>
                 Vaciar Carrito
               </Button>
             </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          )}
+        </div>
+      </div>
+
+      {/* Overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
+      )}
+
+      {/* Login Prompt Dialog */}
+      <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Inicia sesión para continuar</DialogTitle>
+            <DialogDescription>
+              Necesitas una cuenta para realizar compras.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => { setShowLoginPrompt(false); onClose(); }} className="bg-[#2563EB]">
+            Entendido
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

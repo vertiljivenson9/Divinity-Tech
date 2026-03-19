@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/context/session-context'
 import { useAppStore } from '@/store'
 import { useCartStore } from '@/store/cart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,13 +16,13 @@ import { toast } from 'sonner'
 export function CheckoutView() {
   const { setView } = useAppStore()
   const { items, getTotal, clearCart } = useCartStore()
-  const { data: session } = useSession()
+  const { user } = useSession()
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
-    name: session?.user?.name || '',
+    name: user?.name || '',
     phone: '',
     address: '',
     notes: ''
@@ -43,7 +43,7 @@ export function CheckoutView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!session?.user?.id) {
+    if (!user?.id) {
       toast.error('Debes iniciar sesión para continuar')
       return
     }
@@ -59,17 +59,13 @@ export function CheckoutView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: session.user.id,
+          total,
+          shippingAddress: `${formData.name}, ${formData.phone}, ${formData.address}`,
           items: items.map(item => ({
             productId: item.productId,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity
-          })),
-          shippingName: formData.name,
-          shippingPhone: formData.phone,
-          shippingAddr: formData.address,
-          notes: formData.notes
+            quantity: item.quantity,
+            price: item.price
+          }))
         })
       })
 
@@ -131,10 +127,8 @@ export function CheckoutView() {
       <h1 className="text-3xl font-bold">Finalizar Compra</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Shipping Info */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -174,19 +168,9 @@ export function CheckoutView() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notas adicionales</Label>
-                  <Input
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Instrucciones especiales para la entrega..."
-                  />
-                </div>
               </CardContent>
             </Card>
 
-            {/* Payment Method */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -217,14 +201,12 @@ export function CheckoutView() {
           </form>
         </div>
 
-        {/* Order Summary */}
         <div>
           <Card className="sticky top-20">
             <CardHeader>
               <CardTitle>Resumen del Pedido</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Items */}
               <div className="space-y-3 max-h-60 overflow-y-auto">
                 {items.map((item) => (
                   <div key={item.productId} className="flex gap-3">
@@ -252,7 +234,6 @@ export function CheckoutView() {
 
               <Separator />
 
-              {/* Totals */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>

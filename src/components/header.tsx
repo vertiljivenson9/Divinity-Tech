@@ -1,24 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Cpu, ShoppingCart, Moon, Sun, LogIn, LogOut, LayoutDashboard, Package, User } from 'lucide-react'
+import { ShoppingCart, LayoutDashboard, Package, User, LogIn, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAppStore } from '@/store'
 import { useCartStore } from '@/store/cart'
 import { ThemeToggle } from './theme-toggle'
 import { Badge } from '@/components/ui/badge'
-import { useSession, signIn, signOut } from 'next-auth/react'
+import { useSession } from '@/context/session-context'
 import { toast } from 'sonner'
 
 export function Header() {
-  const { view, setView, cartOpen, setCartOpen } = useAppStore()
+  const { view, setView, setCartOpen } = useAppStore()
   const { items } = useCartStore()
-  const { data: session, status } = useSession()
+  const { user, status, signOut } = useSession()
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   const handleLogout = async () => {
-    await signOut({ redirect: false })
+    await signOut()
     setView('home')
     toast.success('Sesión cerrada')
   }
@@ -26,7 +25,6 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 mx-auto max-w-7xl">
-        {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-secondary text-white font-bold">
             DS
@@ -37,7 +35,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* Navegación */}
         <nav className="hidden md:flex items-center gap-1">
           <Button variant={view === 'home' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('home')}>
             Inicio
@@ -46,12 +43,12 @@ export function Header() {
             <Package className="h-4 w-4 mr-1" />
             Catálogo
           </Button>
-          {status === 'authenticated' && session?.user?.role !== 'admin' && (
+          {status === 'authenticated' && user?.role !== 'admin' && (
             <Button variant={view === 'orders' ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('orders')}>
               Mis Pedidos
             </Button>
           )}
-          {session?.user?.role === 'admin' && (
+          {user?.role === 'admin' && (
             <Button variant={view.startsWith('admin') ? 'secondary' : 'ghost'} size="sm" onClick={() => setView('admin-dashboard')}>
               <LayoutDashboard className="h-4 w-4 mr-1" />
               Admin
@@ -59,12 +56,11 @@ export function Header() {
           )}
         </nav>
 
-        {/* Acciones */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {status === 'authenticated' ? (
             <>
-              {session?.user?.role !== 'admin' && (
+              {user?.role !== 'admin' && (
                 <Button variant="ghost" size="icon" className="relative" onClick={() => setCartOpen(true)}>
                   <ShoppingCart className="h-5 w-5" />
                   {itemCount > 0 && (
@@ -78,7 +74,7 @@ export function Header() {
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-4 w-4 text-primary" />
                 </div>
-                <span className="text-sm font-medium">{session.user?.name || session.user?.email}</span>
+                <span className="text-sm font-medium">{user?.name || user?.email}</span>
               </div>
               <Button variant="ghost" size="sm" onClick={handleLogout} className="ml-2">
                 <LogOut className="h-4 w-4 mr-1" />

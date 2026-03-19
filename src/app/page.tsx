@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
+import { useCallback } from 'react'
+import { useSession } from '@/context/session-context'
 import { Header } from '@/components/header'
 import { HomeView } from '@/components/views/home-view'
 import { CatalogView } from '@/components/views/catalog-view'
@@ -18,7 +18,7 @@ import { AdminOrders } from '@/components/admin/admin-orders'
 import { useAppStore } from '@/store'
 
 export default function Page() {
-  const { data: session, status } = useSession()
+  const { user, status } = useSession()
   const { view, productId, cartOpen, setCartOpen } = useAppStore()
 
   const renderView = useCallback(() => {
@@ -38,17 +38,17 @@ export default function Page() {
       case 'register':
         return <RegisterView />
       case 'admin-dashboard':
-        return session?.user?.role === 'admin' ? <AdminDashboard /> : <HomeView />
+        return user?.role === 'admin' ? <AdminDashboard /> : <HomeView />
       case 'admin-products':
-        return session?.user?.role === 'admin' ? <AdminProducts /> : <HomeView />
+        return user?.role === 'admin' ? <AdminProducts /> : <HomeView />
       case 'admin-categories':
-        return session?.user?.role === 'admin' ? <AdminCategories /> : <HomeView />
+        return user?.role === 'admin' ? <AdminCategories /> : <HomeView />
       case 'admin-orders':
-        return session?.user?.role === 'admin' ? <AdminOrders /> : <HomeView />
+        return user?.role === 'admin' ? <AdminOrders /> : <HomeView />
       default:
         return <HomeView />
     }
-  }, [view, productId, session?.user?.role, status])
+  }, [view, productId, user?.role, status])
 
   return (
     <div className="min-h-screen bg-background">

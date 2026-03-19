@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
-    const product = await db.product.findUnique({ where: { id }, include: { category: true } })
-    if (!product) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
+    const product = await db.product.findUnique({
+      where: { id },
+      include: { category: true },
+    })
+    if (!product) {
+      return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
+    }
     return NextResponse.json(product)
   } catch (error) {
     return NextResponse.json({ error: 'Error al obtener producto' }, { status: 500 })
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { requireAdmin } = await import('@/lib/auth-helpers')
-  const session = await requireAdmin(request)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     const data = await request.json()
@@ -24,16 +31,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       where: { id },
       data: {
         name: data.name,
-        slug: data.slug,
         description: data.description,
-        price: Number(data.price),
-        stock: Number(data.stock),
+        price: parseFloat(data.price),
         image: data.image,
-        categoryId: data.categoryId,
-        featured: data.featured,
-        isNew: data.isNew,
-        specs: data.specs ? JSON.stringify(data.specs) : null
-      }
+        categoryId: data.categoryId || null,
+        stock: parseInt(data.stock) || 0,
+      },
     })
     return NextResponse.json(product)
   } catch (error) {
@@ -41,11 +44,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { requireAdmin } = await import('@/lib/auth-helpers')
-  const session = await requireAdmin(request)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params
     await db.product.delete({ where: { id } })

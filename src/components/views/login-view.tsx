@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useSession } from '@/context/session-context'
 import { useAppStore } from '@/store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 
 export function LoginView() {
   const { setView } = useAppStore()
+  const { signIn } = useSession()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -24,17 +25,13 @@ export function LoginView() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false
-      })
+      const success = await signIn(formData.email, formData.password)
 
-      if (result?.error) {
-        toast.error('Credenciales incorrectas')
-      } else {
+      if (success) {
         toast.success('Inicio de sesión exitoso')
         setView('home')
+      } else {
+        toast.error('Credenciales incorrectas')
       }
     } catch (error) {
       toast.error('Error al iniciar sesión')
@@ -105,7 +102,6 @@ export function LoginView() {
             </Button>
           </p>
 
-          {/* Demo credentials */}
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground text-center mb-2">Credenciales de prueba:</p>
             <div className="text-xs space-y-1 text-center">

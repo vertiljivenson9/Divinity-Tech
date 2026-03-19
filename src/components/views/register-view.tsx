@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useSession } from '@/context/session-context'
 import { useAppStore } from '@/store'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 
 export function RegisterView() {
   const { setView } = useAppStore()
+  const { signIn } = useSession()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -49,13 +50,8 @@ export function RegisterView() {
 
       if (res.ok) {
         toast.success('Cuenta creada exitosamente')
-        // Auto login
-        const result = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
-        })
-        if (!result?.error) {
+        const success = await signIn(formData.email, formData.password)
+        if (success) {
           setView('home')
         }
       } else {

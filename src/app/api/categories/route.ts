@@ -3,7 +3,10 @@ import { db } from '@/lib/db'
 
 export async function GET() {
   try {
-    const categories = await db.category.findMany()
+    const categories = await db.category.findMany({
+      include: { _count: { select: { products: true } } },
+      orderBy: { name: 'asc' },
+    })
     return NextResponse.json(categories)
   } catch (error) {
     return NextResponse.json({ error: 'Error al obtener categorías' }, { status: 500 })
@@ -11,19 +14,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { requireAdmin } = await import('@/lib/auth-helpers')
-  const session = await requireAdmin(request)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   try {
     const data = await request.json()
     const category = await db.category.create({
       data: {
         name: data.name,
-        slug: data.slug || data.name.toLowerCase().replace(/\s+/g, '-'),
-        description: data.description || null,
-        image: data.image || null
-      }
+        description: data.description,
+        image: data.image,
+      },
     })
     return NextResponse.json(category)
   } catch (error) {

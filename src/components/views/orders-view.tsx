@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/context/session-context'
 import { useAppStore } from '@/store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,28 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Package, Clock, CheckCircle2, XCircle, Truck } from 'lucide-react'
 
-interface OrderItem {
-  id: string
-  productId: string
-  name: string
-  price: number
-  quantity: number
-  product?: {
-    image: string | null
-  }
-}
-
 interface Order {
   id: string
   status: string
   total: number
-  shippingCost: number
-  tax: number
-  shippingName: string | null
-  shippingPhone: string | null
-  shippingAddr: string | null
+  shippingAddress: string | null
   createdAt: string
-  items: OrderItem[]
+  items: { id: string; productId: string; quantity: number; price: number }[]
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Package }> = {
@@ -43,15 +28,14 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 
 export function OrdersView() {
   const { setView } = useAppStore()
-  const { data: session } = useSession()
+  const { user } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!session?.user?.id) return
       try {
-        const res = await fetch(`/api/orders?userId=${session.user.id}`)
+        const res = await fetch('/api/orders')
         if (res.ok) {
           setOrders(await res.json())
         }
@@ -62,7 +46,7 @@ export function OrdersView() {
       }
     }
     fetchOrders()
-  }, [session?.user?.id])
+  }, [user?.id])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -133,30 +117,17 @@ export function OrdersView() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {/* Shipping Info */}
-                  {order.shippingName && (
+                  {order.shippingAddress && (
                     <div className="mb-4 p-3 bg-muted rounded-lg">
-                      <p className="text-sm font-medium">{order.shippingName}</p>
-                      <p className="text-sm text-muted-foreground">{order.shippingPhone}</p>
-                      <p className="text-sm text-muted-foreground">{order.shippingAddr}</p>
+                      <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
                     </div>
                   )}
 
-                  {/* Items */}
                   <div className="space-y-3">
                     {order.items.map((item) => (
                       <div key={item.id} className="flex gap-3">
-                        <div className="w-16 h-16 rounded bg-muted flex-shrink-0 overflow-hidden">
-                          {item.product?.image ? (
-                            <img src={item.product.image} alt={item.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-sm text-muted-foreground">DS</span>
-                            </div>
-                          )}
-                        </div>
                         <div className="flex-1">
-                          <p className="font-medium">{item.name}</p>
+                          <p className="font-medium">Producto {item.productId}</p>
                           <p className="text-sm text-muted-foreground">
                             {item.quantity} x {formatPrice(item.price)}
                           </p>
@@ -170,27 +141,9 @@ export function OrdersView() {
 
                   <Separator className="my-4" />
 
-                  {/* Totals */}
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>{formatPrice(order.total - order.tax - order.shippingCost)}</span>
-                    </div>
-                    {order.shippingCost > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Envío</span>
-                        <span>{formatPrice(order.shippingCost)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">IVA</span>
-                      <span>{formatPrice(order.tax)}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-bold text-base">
-                      <span>Total</span>
-                      <span className="text-primary">{formatPrice(order.total)}</span>
-                    </div>
+                  <div className="flex justify-between font-bold text-base">
+                    <span>Total</span>
+                    <span className="text-primary">{formatPrice(order.total)}</span>
                   </div>
                 </CardContent>
               </Card>
