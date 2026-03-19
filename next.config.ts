@@ -9,10 +9,8 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Experimental features necesarias para Cloudflare
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs'],
-  },
+  // Server external packages (moved from experimental in Next.js 15)
+  serverExternalPackages: ['@prisma/client', 'bcryptjs'],
 }
 
 export default nextConfig
